@@ -23,13 +23,6 @@
           options(digits = 4) # Limit number of digits
           options(scipen = 20)# Turn off scientific notation under 20 digits 
           
-          #are we running this after a cbo baseline and pre-bea update?
-          post_cbo_baseline<- FALSE
-          # Set the value of 'month_year' to the current month and year (in the format "mm-yyyy")
-          last_month_year <- glue('{format.Date(today() %m-% months(1), "%m")}-{year(today() %m-% months(1))}')
-          month_year <- glue('{format.Date(today() - 4, "%m")}-{year(today())}')
-          print(month_year)
-          
           # Calculate the current date minus 7 days
           current_date <- today() - dweeks(1)
           # Calculate the previous month date, handling wraparound (i.e. previous
@@ -39,14 +32,29 @@
           last_month_2digit <- sprintf("%02d", month(last_month_date))
           # Extract the year from the last_month_date
           last_year <- year(last_month_date)
-          # Create last_month_year string for file naming
-          last_month_year <- glue('{last_month_2digit}-{last_year}')
+          # Default identifiers preserve the ordinary date-based FIM workflow.
+          # Set the environment variables below for an archived-vintage rerun.
+          default_month_year <- glue('{format.Date(today() - 4, "%m")}-{year(today())}')
+          default_last_month_year <- glue('{last_month_2digit}-{last_year}')
+          release_id <- Sys.getenv('FIM_RELEASE_ID')
+          comparison_id <- Sys.getenv('FIM_COMPARISON_ID')
+          forecast_path <- Sys.getenv('FIM_FORECAST_PATH')
+
+          month_year <- if (nzchar(release_id)) release_id else default_month_year
+          last_month_year <- if (nzchar(comparison_id)) comparison_id else default_last_month_year
+          forecast_path <- if (nzchar(forecast_path)) forecast_path else 'data/forecast.xlsx'
+
+          if (!file.exists(forecast_path)) {
+            stop(glue('Forecast workbook not found: {forecast_path}'))
+          }
+
+          print(month_year)
           
           # ---- section-A.2-create-empty-directories ----
           
           #setting our reference period to be the post-cbo files if we've already produced
           # fim output incorporating the cbo update
-          if(file.exists(glue('results/{month_year}-post-cbo'))){
+          if (!nzchar(comparison_id) && file.exists(glue('results/{month_year}-post-cbo'))){
             last_month_year<- glue('{month_year}-post-cbo')
           }
           
@@ -57,10 +65,10 @@
           # Beta folder for Lorae's refactored results
           dir_create(glue('results/{month_year}/beta'))
           
-          # Copy the file 'forecast.xlsx' from the 'data' directory to the 'input_data' directory
+          # Copy the selected forecast workbook to the release archive.
           # This is the copy we keep for the current update
           file_copy(
-            path = 'data/forecast.xlsx', 
+            path = forecast_path,
             new_path = glue('results/{month_year}/input_data/forecast_{month_year}.xlsx'), 
             overwrite = TRUE
           )
@@ -73,9 +81,9 @@
           ## Read in data sources to be combined
           projections <- import_projections()
           national_accounts <- import_national_accounts()
-          forecast <- import_forecast()
-          historical_overrides <- import_historical_overrides()
-          deflator_overrides <- import_deflator_overrides()
+          forecast <- import_forecast(forecast_path)
+          historical_overrides <- import_historical_overrides(forecast_path)
+          deflator_overrides <- import_deflator_overrides(forecast_path)
           
           ## Calculate what the current quarter is using the date from historical overrides
           current_quarter <- historical_overrides %>% slice_max(date) %>% pull(date)
@@ -375,12 +383,14 @@
             create_placeholder_nas()
           )
           
-          # Uncertainty
-          # uncertainty_test <- create_uncertainty(
-          #   forecast,
-          #   historical_overrides, 
-          #   create_placeholder_nas()
-          # )
+          # Supply-side OBBBA adjustment
+          #
+          # Do not use create_uncertainty() here. Its aggregate series includes
+          # tariff uncertainty, which is intentionally excluded from the FIM.
+          supply_side_obbba_adjustment_test <- import_uncertainty_component(
+            forecast_path = forecast_path,
+            component_name = 'Supply Side OBBBA'
+          )
           
           
           # EXTRAS 
@@ -402,6 +412,10 @@
             projections,
             create_placeholder_nas()
           )
+
+          if (!identical(date_test$date, supply_side_obbba_adjustment_test$date)) {
+            stop('Supply Side OBBBA dates do not align with the FIM calculation dates.')
+          }
           
           # ---fim-calculation----
           
@@ -794,13 +808,9 @@
           federal_purchases_contribution <- nipa_federal_purchases_contribution
           state_purchases_contribution <- nipa_state_purchases_contribution 
           
-          # Check to see if uncertainty is being added into consumption correctly 
-          # sum <- consumption_contribution + uncertainty_test$data_series
-          # test <- data.frame(uncertainty_test$date, consumption_contribution, uncertainty_test$data_series, sum)
-          
-          
-          # Revise consumption contribution to include uncertainty factor 
-          # consumption_contribution <- consumption_contribution + uncertainty_test$data_series
+          # Retain the supply-side OBBBA adjustment while excluding tariff uncertainty.
+          consumption_contribution <-
+            consumption_contribution + supply_side_obbba_adjustment
           
           # Sum the Components to create the total FIM 
           fiscal_impact_measure <-
@@ -836,6 +846,7 @@
             real_potential_gdp_growth,
             gdp,
             consumption,
+            supply_side_obbba_adjustment,
             federal_purchases,
             consumption_grants,
             investment_grants,
@@ -910,6 +921,7 @@
             taxes_contribution,
             transfers_contribution,
             consumption_contribution,
+            supply_side_obbba_adjustment_contribution = supply_side_obbba_adjustment,
             taxes_breakdown_contribution,
             fiscal_impact_measure,
             fiscal_impact_4q_ma
@@ -986,4 +998,3 @@
           # Find differences between previous and current contributions and inputs 
           # NOTE: Update values to make sure the correct differences are being generated 
           source("scripts/output_differences.R")
-          
