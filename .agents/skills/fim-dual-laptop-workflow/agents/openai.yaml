@@ -1,0 +1,4 @@
+interface:
+  display_name: "FIM Dual-Laptop Workflow"
+  short_description: "Move FIM tasks safely between laptops"
+  default_prompt: "Use $fim-dual-laptop-workflow to transfer this FIM task between my personal and work laptops."
