@@ -4,8 +4,9 @@ Read AGENTS.md first; it is the shared public operating contract. This file
 adds the Claude-specific boundary.
 
 Before substantive FIM work, run scripts/Start-FIM-AgentSession.ps1 and follow
-its required private-context reading. If it fails, stop rather than relying on
-an outer local handoff, a chat, or OneDrive state.
+the required startup order in AGENTS.md, including the private
+FIM/AGENT_OVERLAY.md and FIM/WORKING_STYLE.md. If it fails, stop rather than
+relying on an outer local handoff, a chat, or OneDrive state.
 
 Use a Claude-named task branch and worktree. Do not edit a Codex worktree or
 assume an uncommitted change transferred just because a chat described it.

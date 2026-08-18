@@ -94,6 +94,7 @@ $requiredPrivateFiles = @(
     'FIM\PROJECT_LOG.md',
     'FIM\OFFICIAL_UPDATE_LOG.md',
     'FIM\AGENT_OVERLAY.md',
+    'FIM\WORKING_STYLE.md',
     'FIM\README.md',
     'skills\CATALOG.md'
 )
@@ -121,4 +122,4 @@ Write-Host 'FIM private-context preflight passed.'
 Write-Host "Public FIM: $codeBranch at $codeCommit"
 Write-Host "Private context: main at $privateCommit"
 Write-Host "Private root: $privateRoot"
-Write-Host 'Read private FIM/HANDOFF.md, recent PROJECT_LOG.md, the latest official-update event, and the task-routed reference before editing.'
+Write-Host 'Read private FIM/AGENT_OVERLAY.md and FIM/WORKING_STYLE.md, then HANDOFF.md, recent PROJECT_LOG.md, the latest official-update event, and the task-routed reference before editing.'

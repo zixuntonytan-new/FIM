@@ -8,7 +8,8 @@ Before substantive analysis, debugging, code editing, workbook work, or a FIM
 run:
 
 1. Run scripts/Start-FIM-AgentSession.ps1.
-2. Read private FIM/HANDOFF.md, recent PROJECT_LOG.md entries, and the latest
+2. Read private FIM/AGENT_OVERLAY.md and FIM/WORKING_STYLE.md, then
+   FIM/HANDOFF.md, recent PROJECT_LOG.md entries, and the latest
    official-update event in the private hutchins-agent-ops clone.
 3. Read the task-relevant public runbook and private technical reference.
 4. Select the relevant shared skill from the private catalog. Do not load every
