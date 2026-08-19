@@ -25,5 +25,7 @@ test_that("annual_to_quarter creates four unique quarters for each annual input"
   expect_equal(nrow(result), 8)
   expect_equal(result$value, rep(c(10, 20), each = 4))
   expect_false(anyDuplicated(result$date))
-  expect_equal(table(format(result$date, "%Y")), c("2020" = 4, "2021" = 4))
+  quarters_per_year <- table(format(result$date, "%Y"))
+  expect_equal(as.integer(quarters_per_year), c(4L, 4L))
+  expect_equal(names(quarters_per_year), c("2020", "2021"))
 })
