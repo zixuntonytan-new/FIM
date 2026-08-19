@@ -15,5 +15,10 @@ description: Start, resume, transfer, or close substantive FIM work using the pu
 5. Stop if the preflight fails, context is dirty or stale, or another agent owns
    the target worktree.
 
+For new work, start a bounded `codex/<task>` or `claude/<task>` branch from
+`origin/workflow/shared-context`. Push reviewable work to `origin`; only
+user-approved changes enter that shared branch. The official `upstream` remains
+read-only unless the user explicitly authorizes a particular official release.
+
 This skill is portable and public-safe. Private evidence stays in
 hutchins-agent-ops.

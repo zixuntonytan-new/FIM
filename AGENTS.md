@@ -23,12 +23,28 @@ local HANDOFF.md, a chat summary, OneDrive state, or remembered context.
 
 ## Safe Git model
 
-- origin is the user's public fork and is the normal destination for task
-  branches.
-- upstream is Hutchins-RAs/FIM. Its push URL must remain disabled; only a
-  task-specific user instruction authorizes an official push.
-- Start a bounded task from a verified official baseline in a grouped sibling
-  worktree: codex/task, claude/task, integration/task, or official/snapshot.
+- `upstream/refactor/clean-data-pipeline` is the read-only official source.
+  Never treat a remembered local copy as its replacement.
+- `origin/workflow/shared-context` is the canonical shared *internal* branch.
+  It begins from a recorded official baseline and carries public-safe workflow
+  rules plus reviewed, approved FIM work. It is not personal scratch space.
+- Start each bounded task from `origin/workflow/shared-context` in a grouped
+  sibling worktree and branch it as `codex/<task>` or `claude/<task>`. Use an
+  `integration/<task>` branch only when two task branches need combined review.
+- Push task and integration branches to `origin`, your public fork. After
+  review and user approval, merge the accepted work into
+  `workflow/shared-context`, then push an annotated handoff tag.
+- For an official release, create a temporary `release/<date>-<purpose>` branch
+  from the exact current upstream ref and select only the approved FIM commits.
+  `upstream` remains push-disabled; only a task-specific user instruction
+  authorizes a one-shot official push or PR.
+- `main`, `origin/refactor/clean-data-pipeline`, `zixun_update_FIM`, and the
+  older Codex/Claude workbench branches are historical references, not shared
+  task starting points. Do not delete them without a logged decision and user
+  approval.
+- If the official upstream has advanced beyond the baseline recorded in the
+  private handoff, stop and deliberately update/reconcile
+  `workflow/shared-context` before starting a new task.
 - Never edit a worktree with recent writes, an active owner session, or
   uncommitted work belonging to another agent.
 - A cross-laptop task needs a clean public branch, an annotated handoff tag,

@@ -5,6 +5,23 @@
 Move a bounded FIM task safely between the personal development laptop and the
 Brookings/Haver work laptop without relying on OneDrive or a mutable local log.
 
+## Branch roles
+
+- `upstream/refactor/clean-data-pipeline`: the read-only official source.
+- `origin/workflow/shared-context`: the canonical internal branch for the
+  shared workflow and reviewed FIM work. It is the normal base for new tasks.
+- `codex/<task>` and `claude/<task>`: bounded agent-owned work branches.
+- `integration/<task>`: optional temporary branch for combining two reviewed
+  agent branches before accepting them into `workflow/shared-context`.
+- `release/<date>-<purpose>`: temporary, explicit official-release candidate
+  created from the exact official ref. It receives only selected, approved FIM
+  commits; do not merge the internal workflow branch wholesale into upstream.
+
+Normal sharing means push a task, integration, or release candidate to
+`origin`. A user-approved merge puts reviewed work on
+`workflow/shared-context`. An official push remains separately gated and uses
+the specific target and release branch the user authorizes.
+
 ## Unit of transfer
 
 Every transfer has four linked records:
@@ -20,7 +37,8 @@ run plan or result, validation, and risk. Both are required.
 ## Send
 
 1. Run the private-context preflight and read the current handoff.
-2. Work only in an owned, bounded worktree and branch.
+2. Start from `origin/workflow/shared-context`; work only in an owned, bounded
+   `codex/<task>` or `claude/<task>` worktree and branch.
 3. Update the private HANDOFF.md and create a new task receipt containing the
    branch, tag, input/workbook identity, command, expected outputs, validation,
    rollback, and unresolved risks.
