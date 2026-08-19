@@ -35,8 +35,11 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Verify the runner's preinstalled R
-        run: Rscript --version
+      - name: Install R from Ubuntu packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes r-base
+          Rscript --version
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
           needs: check
