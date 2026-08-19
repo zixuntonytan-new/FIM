@@ -76,6 +76,17 @@ function Add-Waiver {
 "@ | Set-Content -LiteralPath (Join-Path $directory 'fixture.md') -NoNewline
 }
 
+function Add-IncompleteWaiver {
+    param([string]$Repository)
+    $directory = Join-Path $Repository 'governance/test-waivers'
+    [System.IO.Directory]::CreateDirectory($directory) | Out-Null
+    @'
+# Test waiver: incomplete fixture
+
+- Reason: fixture purpose
+'@ | Set-Content -LiteralPath (Join-Path $directory 'fixture.md') -NoNewline
+}
+
 function Invoke-FixtureCheck {
     param([string]$Repository)
     Push-Location $Repository
@@ -89,6 +100,13 @@ function Invoke-FixtureCheck {
 }
 
 try {
+    $repository = New-FixtureRepository
+    Write-Lines -Path (Join-Path $repository 'src/new.py') -Count 500
+    Add-TestEvidence -Repository $repository
+    Assert-Equal -Actual (Invoke-FixtureCheck -Repository $repository) -Expected 0 -Message 'A 500-line file should pass without a size warning.'
+    Write-Lines -Path (Join-Path $repository 'src/new.py') -Count 501
+    Assert-Equal -Actual (Invoke-FixtureCheck -Repository $repository) -Expected 0 -Message 'A 501-line file should warn but pass.'
+
     $repository = New-FixtureRepository
     Write-Lines -Path (Join-Path $repository 'src/new.py') -Count 1000
     Add-TestEvidence -Repository $repository
@@ -112,6 +130,8 @@ try {
     $repository = New-FixtureRepository
     Write-Lines -Path (Join-Path $repository 'src/legacy.py') -Count 2
     Assert-Equal -Actual (Invoke-FixtureCheck -Repository $repository) -Expected 1 -Message 'Changed source without evidence should fail.'
+    Add-IncompleteWaiver -Repository $repository
+    Assert-Equal -Actual (Invoke-FixtureCheck -Repository $repository) -Expected 1 -Message 'A waiver missing required fields should fail.'
     Add-Waiver -Repository $repository -Expiry '2000-01-01'
     Assert-Equal -Actual (Invoke-FixtureCheck -Repository $repository) -Expected 1 -Message 'An expired waiver should fail.'
     Add-Waiver -Repository $repository -Expiry '2099-12-31'

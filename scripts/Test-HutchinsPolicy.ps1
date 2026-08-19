@@ -20,7 +20,7 @@ function Invoke-RepositoryGit {
 function Normalize-RepositoryPath {
     param([Parameter(Mandatory = $true)][string]$Path)
 
-    return $Path.Replace('\\', '/').TrimStart('./')
+    return $Path.Replace('\', '/').TrimStart('./')
 }
 
 function Test-PathPrefix {
