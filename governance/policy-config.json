@@ -1,0 +1,24 @@
+{
+  "defaultBaseRef": "origin/workflow/shared-context",
+  "sourceExtensions": [".py", ".R", ".ps1", ".sh", ".js", ".ts"],
+  "sourceRoots": ["R", "scripts", "shiny", "analysis", "data-raw", "governance"],
+  "includeRootFiles": true,
+  "excludedPathPrefixes": [
+    ".git/",
+    ".agents/",
+    ".claude/",
+    ".codex/",
+    "archive/",
+    "cache/",
+    "data/",
+    "docs/technical_methodology/",
+    "old/",
+    "results/",
+    "shiny/renv/",
+    "worktrees/"
+  ],
+  "testPathPrefixes": ["tests/", "governance/tests/"],
+  "waiverPathPrefix": "governance/test-waivers/",
+  "warningLines": 500,
+  "maximumLines": 1000
+}

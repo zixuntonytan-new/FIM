@@ -8,7 +8,8 @@ Before substantive analysis, debugging, code editing, workbook work, or a FIM
 run:
 
 1. Run scripts/Start-FIM-AgentSession.ps1.
-2. Read private FIM/AGENT_OVERLAY.md and FIM/WORKING_STYLE.md, then
+2. Read private FIM/AGENT_OVERLAY.md, FIM/WORKING_STYLE.md, and
+   governance/HUTCHINS_AGENT_BYLAW.md, then
    FIM/HANDOFF.md, recent PROJECT_LOG.md entries, and the latest
    official-update event in the private hutchins-agent-ops clone.
 3. Read the task-relevant public runbook and private technical reference.
@@ -63,6 +64,10 @@ local HANDOFF.md, a chat summary, OneDrive state, or remembered context.
   private handoff and task receipt.
 - Record commands actually run and outputs actually inspected. A partial run or
   an earlier-stage completion is not proof of an accepted FIM result.
+- Before handing off or requesting review of a code or automation change, run
+  `scripts/Test-HutchinsPolicy.ps1` against its task base and record the actual
+  validation commands and results. The policy checker enforces source-size and
+  test-evidence rules; it does not replace the workbook or release safeguards.
 
 ## Task routing
 

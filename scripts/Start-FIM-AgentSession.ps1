@@ -95,6 +95,7 @@ $requiredPrivateFiles = @(
     'FIM\OFFICIAL_UPDATE_LOG.md',
     'FIM\AGENT_OVERLAY.md',
     'FIM\WORKING_STYLE.md',
+    'governance\HUTCHINS_AGENT_BYLAW.md',
     'FIM\README.md',
     'skills\CATALOG.md'
 )
