@@ -1,6 +1,7 @@
 ## code to prepare `projections` dataset goes here
-##adding in the helper script source to make sure that the date code runs smoothly
+## Source date helpers for direct execution of this refresh script.
 source("R/helpers.R")
+source("R/fy_annual_to_quarter.R")
 
 librarian::shelf(tidyverse, tsibble)
 economic_projections <- readxl::read_xlsx('inst/extdata/projections.xlsx', sheet = 'economic') %>% 
@@ -9,7 +10,7 @@ economic_projections <- readxl::read_xlsx('inst/extdata/projections.xlsx', sheet
 
 budget_projections <- readxl::read_xlsx('inst/extdata/projections.xlsx', sheet = 'budget') %>% 
   as_tsibble(index = fy) %>%
-  annual_to_quarter() %>%
+  fy_annual_to_quarter() %>%
   fiscal_to_calendar() %>% 
   mutate(federal_ui_timing = case_when(date <= yearquarter('2020 Q4') ~ 0,
                                        date == yearquarter('2021 Q1') ~ 0.725,
@@ -82,7 +83,7 @@ cares <- readxl::read_xlsx('inst/extdata/projections.xlsx', sheet = 'CARES') %>%
 
 crrca <- readxl::read_xlsx('inst/extdata/projections.xlsx', sheet = 'crrca') %>% 
   as_tsibble(index = date) %>% 
-  annual_to_quarter() %>% 
+  fy_annual_to_quarter() %>%
   mutate(federal_ui_timing = c(1, 0, 0, 0, rep(0.25, 4 * 11 - 4)),
          ppp_timing = c(0.5, 0.5, rep(0, 4 * 11 - 2)), 
          rebate_timing = c(1, rep(0, 4 * 11 - 1)), 
