@@ -11,11 +11,15 @@ $policyShells = @(
         Path = (Get-Process -Id $PID).Path
     }
 )
-$windowsPowerShell = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
-if ((Test-Path -LiteralPath $windowsPowerShell) -and -not ($policyShells.Path -contains $windowsPowerShell)) {
-    $policyShells += [pscustomobject]@{
-        Name = 'Windows PowerShell 5.1'
-        Path = $windowsPowerShell
+$windowsPowerShell = $null
+if (-not [string]::IsNullOrWhiteSpace($env:SystemRoot)) {
+    $candidate = Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
+    if ((Test-Path -LiteralPath $candidate) -and -not ($policyShells.Path -contains $candidate)) {
+        $windowsPowerShell = $candidate
+        $policyShells += [pscustomobject]@{
+            Name = 'Windows PowerShell 5.1'
+            Path = $windowsPowerShell
+        }
     }
 }
 
