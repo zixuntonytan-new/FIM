@@ -17,7 +17,7 @@ annual_to_quarter <- function(df, var){
     df %>%
       tidyr::uncount(4) %>%
       dplyr::mutate(yq = base::paste({{year}}, q) %>% 
-               yearquarter(fiscal_start = 12)
+               tsibble::yearquarter(fiscal_start = 12)
       ) %>%
       tsibble::as_tsibble(index = yq)
   }

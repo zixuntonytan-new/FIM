@@ -3,6 +3,7 @@ name: FIM quality
 on:
   pull_request:
     branches:
+      - main
       - workflow/shared-context
       - release/**
   push:
@@ -45,6 +46,6 @@ jobs:
           needs: check
       - name: Parse human-authored R sources
         run: >-
-          Rscript -e 'shiny <- list.files("shiny", pattern = "\\.R$", full.names = TRUE, recursive = TRUE); shiny <- shiny[!grepl("^shiny/renv/", shiny)]; files <- c(list.files("R", pattern = "\\.R$", full.names = TRUE), list.files("scripts", pattern = "\\.R$", full.names = TRUE), list.files("data-raw", pattern = "\\.R$", full.names = TRUE), shiny, list.files(".", pattern = "^fiscal_impact.*\\.R$", full.names = TRUE)); invisible(lapply(files, parse)); cat("Parsed", length(files), "R files\\n")'
+          Rscript -e 'shiny <- list.files("shiny", pattern = "\\.R$", full.names = TRUE, recursive = TRUE); shiny <- shiny[!grepl("^shiny/renv/", shiny)]; files <- c(list.files("R", pattern = "\\.R$", full.names = TRUE), list.files("scripts", pattern = "\\.R$", full.names = TRUE), list.files("data-raw", pattern = "\\.R$", full.names = TRUE), shiny, list.files(".", pattern = "^fiscal_impact.*\\.R$", full.names = TRUE)); invisible(lapply(files, parse)); cat("Parsed", length(files), "R files\n")'
       - name: Run synthetic package tests
         run: Rscript -e 'testthat::test_local(".", reporter = "summary")'

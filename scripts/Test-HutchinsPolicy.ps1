@@ -20,7 +20,11 @@ function Invoke-RepositoryGit {
 function Normalize-RepositoryPath {
     param([Parameter(Mandatory = $true)][string]$Path)
 
-    return $Path.Replace('\', '/').TrimStart('./')
+    $normalized = $Path.Replace('\', '/')
+    if ($normalized.StartsWith('./', [System.StringComparison]::Ordinal)) {
+        $normalized = $normalized.Substring(2)
+    }
+    return $normalized
 }
 
 function Test-PathPrefix {
@@ -91,8 +95,19 @@ function Test-PathAtCommit {
         [Parameter(Mandatory = $true)][string]$Path
     )
 
-    & git -C $script:Repository cat-file -e "$Commit`:$Path" 2>$null
-    return $LASTEXITCODE -eq 0
+    # Windows PowerShell 5.1 treats Git's expected non-zero result as a
+    # terminating NativeCommandError when ErrorActionPreference is Stop.
+    $previousErrorActionPreference = $ErrorActionPreference
+    $exitCode = 1
+    try {
+        $ErrorActionPreference = 'Continue'
+        & git -C $script:Repository cat-file -e "$Commit`:$Path" 2>$null
+        $exitCode = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
+    return $exitCode -eq 0
 }
 
 function Get-CommitLineCount {
@@ -108,13 +123,13 @@ function Get-CommitLineCount {
     return @($lines).Count
 }
 
-function Test-ValidWaiver {
+function Get-ValidWaiver {
     param([Parameter(Mandatory = $true)][string]$Path)
 
     $text = Get-Content -LiteralPath $Path -Raw
     $lines = @($text -split "`r?`n")
     $values = @{}
-    foreach ($field in @('Affected files', 'Reason', 'Compensating evidence', 'Owner', 'Expires')) {
+    foreach ($field in @('Affected files', 'Reason', 'Compensating evidence', 'Owner', 'Approval', 'Expires')) {
         $prefix = "- ${field}:"
         $line = @($lines | Where-Object {
             $_.StartsWith($prefix, [System.StringComparison]::OrdinalIgnoreCase)
@@ -122,7 +137,7 @@ function Test-ValidWaiver {
         $value = if ($line.Count -eq 1) { $line[0].Substring($prefix.Length).Trim() } else { '' }
         if ([string]::IsNullOrWhiteSpace($value)) {
             $script:Failures.Add("Waiver $Path is missing '$field'.")
-            return $false
+            return [pscustomobject]@{ IsValid = $false; AffectedPaths = @() }
         }
         $values[$field] = $value
     }
@@ -137,9 +152,44 @@ function Test-ValidWaiver {
     )
     if (-not $parsed -or $expiry.Date -lt (Get-Date).Date) {
         $script:Failures.Add("Waiver $Path has an invalid or expired Expires date.")
-        return $false
+        return [pscustomobject]@{ IsValid = $false; AffectedPaths = @() }
     }
-    return $true
+
+    $maximumExpiry = (Get-Date).Date.AddDays([int]$script:Config.maxWaiverDays)
+    if ($expiry.Date -gt $maximumExpiry) {
+        $script:Failures.Add("Waiver $Path expires more than $($script:Config.maxWaiverDays) days from today.")
+        return [pscustomobject]@{ IsValid = $false; AffectedPaths = @() }
+    }
+
+    $affectedPaths = @(
+        [regex]::Matches($values['Affected files'], '`([^`]+)`') | ForEach-Object { $_.Groups[1].Value }
+    )
+    if ($affectedPaths.Count -eq 0) {
+        $affectedPaths = @($values['Affected files'] -split ',' | ForEach-Object { $_.Trim() })
+    }
+    $affectedPaths = @($affectedPaths | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | ForEach-Object {
+        Normalize-RepositoryPath -Path $_
+    } | Sort-Object -Unique)
+    if ($affectedPaths.Count -eq 0) {
+        $script:Failures.Add("Waiver $Path must name at least one affected file.")
+        return [pscustomobject]@{ IsValid = $false; AffectedPaths = @() }
+    }
+
+    return [pscustomobject]@{ IsValid = $true; AffectedPaths = $affectedPaths }
+}
+
+function Add-RenamesFromGitDiff {
+    param(
+        [Parameter(Mandatory = $true)][hashtable]$Map,
+        [Parameter(Mandatory = $true)][string[]]$Arguments
+    )
+
+    foreach ($line in @(Invoke-RepositoryGit -Arguments $Arguments)) {
+        $parts = @($line -split "`t")
+        if ($parts.Count -ge 3 -and $parts[0] -match '^R\d*$') {
+            $Map[(Normalize-RepositoryPath -Path $parts[2])] = Normalize-RepositoryPath -Path $parts[1]
+        }
+    }
 }
 
 $repositoryOutput = & git rev-parse --show-toplevel
@@ -165,25 +215,35 @@ $changedPaths = @(
     Invoke-RepositoryGit -Arguments @('diff', '--name-only', '--cached', '--diff-filter=ACMR')
     Invoke-RepositoryGit -Arguments @('ls-files', '--others', '--exclude-standard')
 ) | ForEach-Object { Normalize-RepositoryPath -Path $_ } | Where-Object { $_ } | Sort-Object -Unique
+$renamedBasePaths = @{}
+Add-RenamesFromGitDiff -Map $renamedBasePaths -Arguments @('diff', '--name-status', '--find-renames', '--diff-filter=R', $mergeBase, 'HEAD')
+Add-RenamesFromGitDiff -Map $renamedBasePaths -Arguments @('diff', '--name-status', '--find-renames', '--diff-filter=R')
+Add-RenamesFromGitDiff -Map $renamedBasePaths -Arguments @('diff', '--name-status', '--find-renames', '--cached', '--diff-filter=R')
 
 $Failures = [System.Collections.Generic.List[string]]::new()
 $Warnings = [System.Collections.Generic.List[string]]::new()
 $sourcePaths = @($changedPaths | Where-Object { Test-SourcePath -Path $_ })
 $testChanged = $false
 foreach ($path in $changedPaths) {
-    foreach ($prefix in @($Config.testPathPrefixes)) {
-        if (Test-PathPrefix -Path $path -Prefix $prefix) {
+    foreach ($pattern in @($Config.testFilePatterns)) {
+        if ($path -match $pattern) {
             $testChanged = $true
+            break
         }
     }
 }
 
-$validWaiver = $false
+$waivedSourcePaths = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
 foreach ($path in $changedPaths) {
     if ((Test-PathPrefix -Path $path -Prefix $Config.waiverPathPrefix) -and [System.IO.Path]::GetFileName($path) -ne 'README.md') {
         $fullPath = Join-Path $Repository ($path.Replace('/', [System.IO.Path]::DirectorySeparatorChar))
-        if ((Test-Path -LiteralPath $fullPath -PathType Leaf) -and (Test-ValidWaiver -Path $fullPath)) {
-            $validWaiver = $true
+        if (Test-Path -LiteralPath $fullPath -PathType Leaf) {
+            $waiver = Get-ValidWaiver -Path $fullPath
+            if ($waiver.IsValid) {
+                foreach ($affectedPath in @($waiver.AffectedPaths)) {
+                    $null = $waivedSourcePaths.Add($affectedPath)
+                }
+            }
         }
     }
 }
@@ -195,8 +255,9 @@ foreach ($path in $sourcePaths) {
     }
 
     $currentLines = Get-FileLineCount -Path $fullPath
-    $existsAtBase = Test-PathAtCommit -Commit $mergeBase -Path $path
-    $baseLines = if ($existsAtBase) { Get-CommitLineCount -Commit $mergeBase -Path $path } else { 0 }
+    $basePath = if ($renamedBasePaths.ContainsKey($path)) { [string]$renamedBasePaths[$path] } else { $path }
+    $existsAtBase = Test-PathAtCommit -Commit $mergeBase -Path $basePath
+    $baseLines = if ($existsAtBase) { Get-CommitLineCount -Commit $mergeBase -Path $basePath } else { 0 }
 
     if ($currentLines -gt [int]$Config.maximumLines) {
         $isAllowedLegacy = $existsAtBase -and $baseLines -gt [int]$Config.maximumLines -and $currentLines -le $baseLines
@@ -209,8 +270,11 @@ foreach ($path in $sourcePaths) {
     }
 }
 
-if (-not $SkipTestEvidence -and $sourcePaths.Count -gt 0 -and -not $testChanged -and -not $validWaiver) {
-    $Failures.Add('Executable source changed without a test change or a valid, time-limited test waiver.')
+if (-not $SkipTestEvidence -and $sourcePaths.Count -gt 0 -and -not $testChanged) {
+    $unwaivedSourcePaths = @($sourcePaths | Where-Object { -not $waivedSourcePaths.Contains($_) })
+    if ($unwaivedSourcePaths.Count -gt 0) {
+        $Failures.Add("Executable source changed without a matching test change or a valid, time-limited test waiver: $($unwaivedSourcePaths -join ', ')")
+    }
 }
 
 foreach ($warning in $Warnings) {
@@ -218,9 +282,9 @@ foreach ($warning in $Warnings) {
 }
 if ($Failures.Count -gt 0) {
     foreach ($failure in $Failures) {
-        Write-Error $failure
+        Write-Host "POLICY FAILURE: $failure"
     }
-    exit 1
+    throw "Hutchins policy check failed with $($Failures.Count) violation(s)."
 }
 
 Write-Host "Hutchins policy check passed against $BaseRef ($($sourcePaths.Count) changed source file(s))."

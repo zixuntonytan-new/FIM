@@ -17,8 +17,15 @@
     "shiny/renv/",
     "worktrees/"
   ],
-  "testPathPrefixes": ["tests/", "governance/tests/"],
+  "testFilePatterns": [
+    "^tests/testthat/test-.*\\.R$",
+    "^tests/test_.*\\.py$",
+    "^tests/test-.*\\.(js|ts)$",
+    "^tests/.*\\.(test|spec)\\.(js|ts)$",
+    "^governance/tests/Test-.*\\.ps1$"
+  ],
   "waiverPathPrefix": "governance/test-waivers/",
+  "maxWaiverDays": 30,
   "warningLines": 500,
   "maximumLines": 1000
 }
