@@ -44,7 +44,7 @@ test_that("fy_annual_to_quarter expands each fiscal annual row four times", {
 
   expect_equal(nrow(result), 8)
   expect_equal(result$value, rep(c(10, 20), each = 4))
-  expect_identical(anyDuplicated(result$date), 0L)
+  expect_false(anyDuplicated(result$date))
   expect_equal(
     as.Date(result$date),
     as.Date(c(
@@ -55,7 +55,7 @@ test_that("fy_annual_to_quarter expands each fiscal annual row four times", {
 })
 
 test_that("CBO preparation calls the fiscal-year expansion helper", {
-  lines <- readLines(file.path("data-raw", "projections.R"))
+  lines <- readLines(testthat::test_path("..", "..", "data-raw", "projections.R"))
   active_lines <- lines[!grepl("^\\s*#", lines)]
 
   expect_equal(sum(grepl("\\bfy_annual_to_quarter\\(", active_lines)), 2L)
