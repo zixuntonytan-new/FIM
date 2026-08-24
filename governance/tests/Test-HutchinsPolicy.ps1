@@ -266,3 +266,7 @@ finally {
         Remove-Item -LiteralPath $temporaryRoot -Recurse -Force
     }
 }
+
+# Expected failing fixture cases leave $LASTEXITCODE at 1.  Set the suite's
+# process status explicitly after all assertions have passed.
+exit 0
