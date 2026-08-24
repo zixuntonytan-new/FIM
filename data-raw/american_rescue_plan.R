@@ -1,4 +1,5 @@
 library('readxl')
+source("R/fy_annual_to_quarter.R")
 
 arp_annual <- read_xlsx('data/american_rescue_plan.xlsx',
           range = 'A3:AV14') %>% 
@@ -8,33 +9,6 @@ arp_timing <- read_xlsx('data/american_rescue_plan.xlsx', sheet = 'Timing Assump
                         range = 'A2:I22') %>% 
   mutate(date = yearquarter(date, fiscal_start = 1)) %>% 
   as_tsibble(index = date)
-
-fy_annual_to_quarter  <- function(df){
-  year <-
-    df %>%
-    tsibble::index_var()
-  min <-
-    df %>%
-    select(rlang::enexpr(year)) %>%
-    min() 
-  
-  max <- 
-    df %>%
-    select(rlang::enexpr(year)) %>%
-    max()
-  start <- tsibble::yearquarter(glue::glue('{min} Q1'), fiscal_start = 1)
-  end <- tsibble::yearquarter(glue::glue('{max} Q4'), fiscal_start = 1)
-  x <- seq(start,  end, by = 1)
-  
-  df %>%
-    as_tibble() %>%
-    slice(rep(1:n(), each=4)) %>%
-    
-    mutate(date = tsibble::yearquarter(x)) %>%
-    relocate(date, .before =  everything()) %>%
-    tsibble::as_tsibble(index = date)
-}
-
 
 arp_annual %>% 
   as_tsibble(index = date) %>% 

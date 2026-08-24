@@ -14,7 +14,8 @@ LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.2
 Suggests:
-    knitr
+    knitr,
+    testthat (>= 3.0.0)
 Depends:
     R (>= 3.5)
 Imports:
@@ -37,4 +38,5 @@ Imports:
 Remotes:
     TimTeaFan/dplyover
 VignetteBuilder: knitr
+Config/testthat/edition: 3
 URL: https://github.com/malcalakovalski/fim

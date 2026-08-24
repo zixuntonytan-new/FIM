@@ -17,13 +17,13 @@ annual_to_quarter <- function(df, var){
     df %>%
       tidyr::uncount(4) %>%
       dplyr::mutate(yq = base::paste({{year}}, q) %>% 
-               yearquarter(fiscal_start = 12)
+               tsibble::yearquarter(fiscal_start = 12)
       ) %>%
       tsibble::as_tsibble(index = yq)
   }
   df %>%
     year_to_quarter({{var}}) %>%
-    dplyr::mutate(date = glue::glue('{year(yq)}-{month(yq)}') %>% 
+    dplyr::mutate(date = glue::glue('{lubridate::year(yq)}-{lubridate::month(yq)}') %>%
              zoo::as.yearmon() %>% lubridate::as_date() + base::months(1) - lubridate::days(1),
            yq = tsibble::yearquarter(yq)
     ) %>%
