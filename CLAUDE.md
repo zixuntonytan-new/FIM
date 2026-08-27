@@ -1,19 +1,26 @@
 # FIM instructions for Claude
 
-Read AGENTS.md first; it is the shared public operating contract. This file
-adds the Claude-specific boundary.
+Read `AGENTS.md` first; it is the shared public operating contract.
 
-Before substantive FIM work, run scripts/Start-FIM-AgentSession.ps1 and follow
-the required startup order in AGENTS.md, including the private
-FIM/AGENT_OVERLAY.md and FIM/WORKING_STYLE.md. If it fails, stop rather than
-relying on an outer local handoff, a chat, or OneDrive state.
+For every substantive FIM response, begin with the activation status line
+defined there. Until Stage 7, start only in a clean `FIM-next` checkout or an
+owned task worktree; never begin in `Sarah_Chase_FIM` or the outer legacy
+wrapper.
 
-For a new task, start a Claude-named branch and worktree from
-`origin/workflow/shared-context`: `claude/<task>`. Do not edit a Codex worktree
-or assume an uncommitted change transferred just because a chat described it.
-Push the task branch to `origin`; only reviewed, user-approved work enters the
-shared workflow branch. Verify the public branch/tag and matching private task
-receipt before any work-laptop run.
+Before substantive work, run `scripts/Start-FIM-AgentSession.ps1` and follow
+the private-context reading order in `AGENTS.md`. If it fails, stop rather
+than relying on an outer handoff, chat, or OneDrive state.
 
-The portable shared skill is .agents/skills/fim-shared-context/SKILL.md. The
-private skills catalog selects additional procedures only when relevant.
+For a new task, create a Claude-owned branch and worktree from the current
+`origin/workflow/shared-context` branch:
+
+- personal laptop: `claude/personal/<task>`;
+- work laptop: `claude/work/<task>`.
+
+Do not edit a Codex worktree or assume an uncommitted change transferred
+because a chat described it. Push reviewable task work to `origin`; only
+reviewed, user-approved work enters the shared workflow branch. Verify the
+public branch/tag and matching private task receipt before a work-laptop run.
+
+The portable shared skill is `.agents/skills/fim-shared-context/SKILL.md`.
+The private catalog selects additional procedures only when relevant.
