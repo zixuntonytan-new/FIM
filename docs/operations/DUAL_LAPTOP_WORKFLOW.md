@@ -10,7 +10,10 @@ Brookings/Haver work laptop without relying on OneDrive or a mutable local log.
 - `upstream/refactor/clean-data-pipeline`: the read-only official source.
 - `origin/workflow/shared-context`: the canonical internal branch for the
   shared workflow and reviewed FIM work. It is the normal base for new tasks.
-- `codex/<task>` and `claude/<task>`: bounded agent-owned work branches.
+- `codex/personal/<task>` and `claude/personal/<task>`: bounded work branches
+  on the personal laptop.
+- `codex/work/<task>` and `claude/work/<task>`: bounded work branches on the
+  work laptop.
 - `integration/<task>`: optional temporary branch for combining two reviewed
   agent branches before accepting them into `workflow/shared-context`.
 - `release/<date>-<purpose>`: temporary, explicit official-release candidate
@@ -37,8 +40,8 @@ run plan or result, validation, and risk. Both are required.
 ## Send
 
 1. Run the private-context preflight and read the current handoff.
-2. Start from `origin/workflow/shared-context`; work only in an owned, bounded
-   `codex/<task>` or `claude/<task>` worktree and branch.
+2. Start from `origin/workflow/shared-context`; work only in an owned,
+   bounded branch whose name includes both agent and laptop.
 3. Update the private HANDOFF.md and create a new task receipt containing the
    branch, tag, input/workbook identity, command, expected outputs, validation,
    rollback, and unresolved risks.

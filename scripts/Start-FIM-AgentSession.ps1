@@ -53,10 +53,24 @@ function Find-OpsRepository {
     throw 'Private hutchins-agent-ops clone was not found. Set HUTCHINS_AGENT_OPS or pass -OpsPath.'
 }
 
+function Test-BranchName {
+    param([Parameter(Mandatory = $true)][string]$Branch)
+
+    return $Branch -eq 'workflow/shared-context' -or
+        $Branch -match '^(codex|claude)/(personal|work)/[^/]+$' -or
+        $Branch -match '^integration/[^/]+$' -or
+        $Branch -match '^release/\d{4}-\d{2}-\d{2}-[^/]+$'
+}
+
 $scriptDirectory = Split-Path -Path $PSCommandPath -Parent
 $candidateCodeRoot = Split-Path -Path $scriptDirectory -Parent
 $codeRoot = Invoke-CheckedGit -Repository $candidateCodeRoot -Arguments @('rev-parse', '--show-toplevel')
 $codeRoot = $codeRoot.Trim()
+
+if ((Split-Path -Path $codeRoot -Leaf) -eq 'Sarah_Chase_FIM') {
+    throw 'Sarah_Chase_FIM is legacy reference and Git storage during activation, not a valid FIM task location. Start from a clean FIM-next checkout.'
+}
+
 $privateRoot = Find-OpsRepository -CodeRoot $codeRoot
 $privateRoot = (Resolve-Path -LiteralPath $privateRoot).Path
 
@@ -115,12 +129,54 @@ if ($upstreamPush -notmatch 'DISABLED') {
     throw "FIM upstream push URL is not disabled: $upstreamPush"
 }
 
+if (-not $NoPull) {
+    Invoke-CheckedGit -Repository $codeRoot -Arguments @('fetch', 'origin') | Out-Null
+}
+
 $codeBranch = Invoke-CheckedGit -Repository $codeRoot -Arguments @('branch', '--show-current')
+if (-not (Test-BranchName -Branch $codeBranch)) {
+    throw "FIM branch '$codeBranch' is not an approved canonical, task, integration, or release branch."
+}
+
 $codeCommit = Invoke-CheckedGit -Repository $codeRoot -Arguments @('rev-parse', 'HEAD')
+$sharedRef = 'origin/workflow/shared-context'
+$sharedCommit = Invoke-CheckedGit -Repository $codeRoot -Arguments @('rev-parse', $sharedRef)
+$codeStatus = Invoke-CheckedGit -Repository $codeRoot -Arguments @('status', '--porcelain')
+
+if ($codeBranch -eq 'workflow/shared-context') {
+    if ($codeStatus) {
+        throw 'The canonical workflow checkout must be clean. Create an owned task worktree before editing.'
+    }
+    if ($codeCommit -ne $sharedCommit) {
+        throw 'The canonical workflow checkout is not at the current origin/workflow/shared-context commit. Fast-forward it before beginning a task.'
+    }
+}
+else {
+    $priorErrorAction = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        & git -c "safe.directory=$codeRoot" -C $codeRoot merge-base --is-ancestor $sharedRef HEAD 2>$null
+        $isCurrentSharedAncestor = $LASTEXITCODE -eq 0
+    }
+    finally {
+        $ErrorActionPreference = $priorErrorAction
+    }
+    if (-not $isCurrentSharedAncestor) {
+        throw "Task branch '$codeBranch' does not descend from current $sharedRef. Rebase or merge the shared branch deliberately before continuing."
+    }
+    if ($codeBranch -match '^release/' -and $codeStatus) {
+        throw 'A release candidate must be clean before preflight can pass.'
+    }
+    if ($codeStatus) {
+        Write-Warning 'This task worktree has an intended diff. Run the policy checker before review; do not treat this preflight as a clean transfer receipt.'
+    }
+}
+
 $privateCommit = Invoke-CheckedGit -Repository $privateRoot -Arguments @('rev-parse', 'HEAD')
 
 Write-Host 'FIM private-context preflight passed.'
 Write-Host "Public FIM: $codeBranch at $codeCommit"
+Write-Host "Shared base: $sharedCommit"
 Write-Host "Private context: main at $privateCommit"
 Write-Host "Private root: $privateRoot"
 Write-Host 'Read private FIM/AGENT_OVERLAY.md and FIM/WORKING_STYLE.md, then HANDOFF.md, recent PROJECT_LOG.md, the latest official-update event, and the task-routed reference before editing.'
