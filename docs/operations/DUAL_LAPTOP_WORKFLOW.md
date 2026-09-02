@@ -67,8 +67,11 @@ run plan or result, validation, and risk. Both are required.
    or risk changed, then commit and push the private repository.
 3. Commit only reviewable public code and approved artifacts. Keep Haver caches,
    credentials, and private context out of the public fork.
-4. Tag and push the return branch. The receiving laptop verifies both the tag
-   and private context before continuing.
+4. If the return adds a public commit, create an annotated return tag and push
+   it with the branch. If no public commit changed, reuse the existing verified
+   tag and record why a duplicate tag would add no protection in the return
+   receipt. The receiving laptop verifies the tag and private context before
+   continuing.
 
 ## Stop conditions
 
