@@ -2,13 +2,14 @@
 
 ## FIM activation status
 
-Every substantive FIM response begins with:
+Activation finished on the personal laptop (Stage 7, 2026-09-03). Do not open
+responses with a migration-stage line; report migration stages only during
+actual migration work. A laptop is ready for FIM work when its preflight
+passes; the private handoff records each laptop's current state.
 
-`FIM activation — Stage X/7. Completed: … Remaining: … Next hard gate: …`
-
-Until Stage 7 completes, begin work only in a clean `FIM-next` checkout or an
-owned task worktree created from it. Do not begin work in `Sarah_Chase_FIM`,
-the outer legacy `FIM` wrapper, an old workbench, `main`, or a historical
+Begin work only in the canonical `FIM` checkout or an owned task worktree
+created from it. Do not begin work in `Sarah_Chase_FIM`, a leftover `FIM-next`
+checkout, a legacy `FIM` wrapper, an old workbench, `main`, or a historical
 branch. Those locations are evidence or migration material, not task bases.
 
 ## Required session start
