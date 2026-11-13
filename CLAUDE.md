@@ -2,10 +2,10 @@
 
 Read `AGENTS.md` first; it is the shared public operating contract.
 
-For every substantive FIM response, begin with the activation status line
-defined there. Until Stage 7, start only in a clean `FIM-next` checkout or an
-owned task worktree; never begin in `Sarah_Chase_FIM` or the outer legacy
-wrapper.
+Activation is finished on the personal laptop; do not open responses with a
+migration-stage line. Start only in the canonical `FIM` checkout or an owned
+task worktree; never begin in `Sarah_Chase_FIM`, a leftover `FIM-next`
+checkout, or a legacy wrapper.
 
 Before substantive work, run `scripts/Start-FIM-AgentSession.ps1` and follow
 the private-context reading order in `AGENTS.md`. If it fails, stop rather
