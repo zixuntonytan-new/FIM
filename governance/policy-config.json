@@ -1,5 +1,6 @@
 {
   "defaultBaseRef": "origin/workflow/shared-context",
+  "officialSourceCommit": "63e9738d58a2414e4ebbe3873d0b949b43b3305f",
   "sourceExtensions": [".py", ".R", ".ps1", ".sh", ".js", ".ts"],
   "sourceRoots": ["R", "scripts", "shiny", "analysis", "data-raw", "governance"],
   "includeRootFiles": true,

@@ -259,6 +259,9 @@ try {
         'Executable source changed without a matching test change'
     )
 
+    . (Join-Path $PSScriptRoot 'Test-PinnedOfficialPolicy.ps1')
+    Test-PinnedOfficialPolicy
+
     Write-Host "Hutchins policy checker tests passed in $($policyShells.Name -join ' and ')."
 }
 finally {
