@@ -203,6 +203,19 @@ if (-not (Test-Path -LiteralPath $configPath -PathType Leaf)) {
     throw "Policy configuration is missing: $configPath"
 }
 $Config = Get-Content -LiteralPath $configPath -Raw | ConvertFrom-Json
+# Optional for existing configurations; when supplied, require an exact local commit.
+$OfficialSourceCommit = ''
+$officialPinProperty = $Config.PSObject.Properties['officialSourceCommit']
+if ($null -ne $officialPinProperty) {
+    $OfficialSourceCommit = [string]$officialPinProperty.Value
+    if ($OfficialSourceCommit -cnotmatch '^[0-9a-f]{40}$') {
+        throw 'officialSourceCommit must be a full lowercase commit ID.'
+    }
+    $resolvedOfficialCommit = (Invoke-RepositoryGit -Arguments @('rev-parse', '--verify', "$OfficialSourceCommit^{commit}") | Select-Object -First 1).Trim()
+    if ($resolvedOfficialCommit -cne $OfficialSourceCommit) {
+        throw 'officialSourceCommit must name the commit itself, not a tag object.'
+    }
+}
 if ([string]::IsNullOrWhiteSpace($BaseRef)) {
     $BaseRef = [string]$Config.defaultBaseRef
 }
@@ -248,10 +261,22 @@ foreach ($path in $changedPaths) {
     }
 }
 
+$officialSourcePaths = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
 foreach ($path in $sourcePaths) {
     $fullPath = Join-Path $Repository ($path.Replace('/', [System.IO.Path]::DirectorySeparatorChar))
     if (-not (Test-Path -LiteralPath $fullPath -PathType Leaf)) {
         continue
+    }
+
+    if ($OfficialSourceCommit -and (Test-PathAtCommit -Commit $OfficialSourceCommit -Path $path)) {
+        $officialBlob = (Invoke-RepositoryGit -Arguments @('rev-parse', '--verify', "$OfficialSourceCommit`:$path") | Select-Object -First 1).Trim()
+        # Use Git's normal clean filters and attributes at this repository path.
+        $workingBlob = (Invoke-RepositoryGit -Arguments @('hash-object', "--path=$path", '--', $fullPath) | Select-Object -First 1).Trim()
+        if ($workingBlob -ceq $officialBlob) {
+            $null = $officialSourcePaths.Add($path)
+            Write-Host "Pinned-official size/test-evidence exemption: $path ($OfficialSourceCommit)"
+            continue
+        }
     }
 
     $currentLines = Get-FileLineCount -Path $fullPath
@@ -271,7 +296,9 @@ foreach ($path in $sourcePaths) {
 }
 
 if (-not $SkipTestEvidence -and $sourcePaths.Count -gt 0 -and -not $testChanged) {
-    $unwaivedSourcePaths = @($sourcePaths | Where-Object { -not $waivedSourcePaths.Contains($_) })
+    $unwaivedSourcePaths = @($sourcePaths | Where-Object {
+        -not $officialSourcePaths.Contains($_) -and -not $waivedSourcePaths.Contains($_)
+    })
     if ($unwaivedSourcePaths.Count -gt 0) {
         $Failures.Add("Executable source changed without a matching test change or a valid, time-limited test waiver: $($unwaivedSourcePaths -join ', ')")
     }
